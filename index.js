@@ -30,7 +30,12 @@ const validateMovie = [
         throw new Error('El título ya existe para otra película');
       }
       return true;
-    })
+    }),
+  body('year')
+    .notEmpty()
+    .withMessage('El año es requerido')
+    .isInt({ min: 1950, max: 2025 })
+    .withMessage('El año debe ser un número entre 1950 y 2025')
 ];
 
 app.get('/', (req, res) => {
@@ -38,8 +43,16 @@ app.get('/', (req, res) => {
 });
 
 app.get('/movies', async (req, res) => {
-  const { rows } = await db.query("SELECT * FROM movies");
-  res.json(rows);
+  try {
+    const { rows } = await db.query("SELECT * FROM movies");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({
+      code: 1001,
+      message: 'Error al obtener películas',
+      error_message: err.message
+    });
+  }
 });
 
 app.post('/movies', validateMovie, async (req, res) => {
@@ -53,7 +66,7 @@ app.post('/movies', validateMovie, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({
-      code: 1001,
+      code: 1002,
       message: 'Error al registrar película',
       error_message: err.message
     });
@@ -70,30 +83,39 @@ app.get('/movies/:id', async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({
-      code: 1002,
+      code: 1003,
       message: 'Error al obtener película',
       error_message: err.message
     });
   }
 });
 
-app.put('/movies/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { rowCount } = await db.query(`SELECT * FROM movies WHERE id=${id}`);
-  const { title, year } = req.body;
-  if (rowCount > 0) {
-    const { rows } = await db.query(
-      `UPDATE movies SET title='${title}', year=${year}, updated_at=NOW() WHERE id=${id}
-            RETURNING *`);
-    res.json(rows[0]);
-  } else {
-    const { rows } = await db.query(
-      "INSERT INTO movies (id, title, year) VALUES ($1, $2, $3) RETURNING *",
-      [id, title, year]
-    );
-    res.status(201).json(rows[0]);
+app.put('/movies/:id', validateMovie, async (req, res) => {
+  const errors = validationResult(req, res);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array() });
+  }
+
+  try {
+    const id = parseInt(req.params.id);
+    const { title, year } = req.body;
+    const { rowCount } = await db.query(`SELECT * FROM movies WHERE id=${id}`);
+    if (rowCount > 0) {
+      const { rows } = await db.query(`UPDATE movies SET title = '${title}', year = '${year}' WHERE id = '${id}' RETURNING *`);
+      res.json(rows[0]);
+    } else {
+      const { rows } = await db.query('INSERT INTO movies (id, title, year) VALUES ($1, $2, $3) RETURNING *', [id, title, year]);
+      res.status(201).json(rows[0]);
+    }
+  } catch (err) {
+    res.status(500).json({
+      code: 1004,
+      message: 'Error al modificar la película',
+      error_message: err.message
+    });
   }
 });
+
 app.patch('/movies/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const movieIndex = movies.findIndex(m => m.id === id);
