@@ -2,9 +2,10 @@ const express = require('express');
 const app = express();
 const { body, validationResult } = require('express-validator');
 const { Client } = require('pg');
-const port = 3000;
 
 require('dotenv').config();
+
+const port = process.env.PORT;
 
 app.use(express.json());
 
