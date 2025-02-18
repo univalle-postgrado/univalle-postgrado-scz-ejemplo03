@@ -187,14 +187,20 @@ app.patch('/movies/:id', validateMoviePatch, async (req, res) => {
 });
 
 app.delete('/movies/:id', async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { rowCount } = await db.query(`SELECT * FROM movies WHERE id=${id}`);
-  if (rowCount > 0) {
-    const { rows } = await db.query(
-      `DELETE FROM movies WHERE id=${id}`);
+  try {
+    const id = parseInt(req.params.id);
+    const { rowCount } = await db.query(`SELECT id FROM movies WHERE id=${id}`);
+    if (rowCount == 0) {
+      return res.status(404).json({ message: 'Película no encontrada' });
+    }
+    await db.query('DELETE FROM movies WHERE id = $1', [id]);
     res.sendStatus(204);
-  } else {
-    res.status(404).json({ message: "Película no encontrada" });
+  } catch (err) {
+    res.status(500).json({
+      code: 1006,
+      message: 'Error al eliminar la película',
+      error_message: err.message
+    });
   }
 });
 
