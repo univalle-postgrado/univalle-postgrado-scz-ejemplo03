@@ -4,14 +4,16 @@ const { body, validationResult } = require('express-validator');
 const { Client } = require('pg');
 const port = 3000;
 
+require('dotenv').config();
+
 app.use(express.json());
 
 const db = new Client({
-  user: 'univalle',
-  host: 'localhost',
-  database: 'univalle_dbmovies',
-  password: '123456',
-  port: 5432
+  user: process.env.DB_USR,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PWD,
+  port: process.env.DB_PORT
 });
 db.connect();
 
