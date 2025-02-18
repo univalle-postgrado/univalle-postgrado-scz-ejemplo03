@@ -60,15 +60,23 @@ app.post('/movies', validateMovie, async (req, res) => {
   }
 });
 
-app.get('/movies/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const movieIndex = movies.findIndex(m => m.id === id);
-  if (movieIndex !== -1) {
-    res.json(movies[movieIndex]);
-  } else {
-    res.status(404).json({ message: "Película no encontrada" });
+app.get('/movies/:id', async (req, res) => {
+  try {
+    const { rows, rowCount } = await db.query("SELECT * FROM movies WHERE id=" + req.params.id);
+    if (rowCount > 0) {
+      res.json(rows[0]);
+    } else {
+      res.status(404).json({ message: 'Película no encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({
+      code: 1002,
+      message: 'Error al obtener película',
+      error_message: err.message
+    });
   }
 });
+
 app.put('/movies/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { rowCount } = await db.query(`SELECT * FROM movies WHERE id=${id}`);
